@@ -10,29 +10,34 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 func reader(conn *websocket.Conn) {
 	for {
-		messageType, message, err := conn.ReadMessage()
-		if err != nil {
+		wsMessage := WSMessage{}
+		if err := conn.ReadJSON(&wsMessage); err != nil {
 			log.Fatal(err)
 		}
-		log.Println(message)
-
-		if err := conn.WriteMessage(messageType, message); err != nil {
-			log.Fatal(err)
+		if wsMessage.Type == "offer" {
+			log.Println("offer")
+		} else if wsMessage.Type == "answer" {
+			log.Println("answer")
+		} else if wsMessage.Type == "join" {
+			log.Println("join")
 		}
 	}
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	ws, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
+	defer conn.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	reader(ws)
+	reader(conn)
 }
 
 func setRoutes() {
