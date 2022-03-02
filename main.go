@@ -7,7 +7,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var isStreaming = false
+var viewers = make(map[User]int)
+
+var streamer = User{ID: -1, conn: nil}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -24,12 +26,52 @@ func reader(conn *websocket.Conn) {
 			log.Fatal(err)
 		}
 		if wsMessage.Type == "offer" {
-			log.Println("offer")
+			onOffer(&wsMessage)
 		} else if wsMessage.Type == "answer" {
-			log.Println("answer")
-		} else if wsMessage.Type == "join" {
-			log.Println("join")
+			onAnswer(&wsMessage)
+		} else if wsMessage.Type == "candidate" {
+			onCandidate(&wsMessage)
+		} else if wsMessage.Type == "view" {
+			onView(&wsMessage)
 		}
+	}
+}
+
+func onView(wsMessage *WSMessage) {
+	user := wsMessage.User
+	exist := viewers[user]
+	if exist == 0 {
+		viewers[user] = 0
+	} else {
+		viewers[user] = 1
+	}
+}
+
+func onCandidate(wsMessage *WSMessage) {
+	if wsMessage.User == streamer {
+		for user := range viewers {
+			user.conn.WriteJSON(&wsMessage)
+		}
+	} else {
+		streamer.conn.WriteJSON(&wsMessage)
+	}
+}
+
+func onAnswer(wsMessage *WSMessage) {
+	if streamer.ID != -1 {
+		streamer.conn.WriteJSON(&wsMessage)
+	} else {
+		log.Println("No streamer to send answer to.")
+	}
+}
+
+func onOffer(wsMessage *WSMessage) {
+	if streamer.ID == -1 {
+		streamer = wsMessage.User
+	}
+
+	for user := range viewers {
+		user.conn.WriteJSON(&wsMessage)
 	}
 }
 
