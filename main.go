@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -58,20 +59,24 @@ func onCandidate(wsMessage *WSMessage) {
 }
 
 func onAnswer(wsMessage *WSMessage) {
+	var negotiation Negotiation
+	_ = json.Unmarshal([]byte(wsMessage.Data), &negotiation)
 	if streamer.ID != -1 {
-		streamer.conn.WriteJSON(&wsMessage)
+		streamer.conn.WriteJSON(&negotiation)
 	} else {
 		log.Println("No streamer to send answer to.")
 	}
 }
 
 func onOffer(wsMessage *WSMessage) {
+	var negotiation Negotiation
+	_ = json.Unmarshal([]byte(wsMessage.Data), &negotiation)
 	if streamer.ID == -1 {
 		streamer = wsMessage.User
 	}
 
 	for user := range viewers {
-		user.conn.WriteJSON(&wsMessage)
+		user.conn.WriteJSON(&negotiation)
 	}
 }
 

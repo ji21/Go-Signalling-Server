@@ -17,5 +17,6 @@ type User struct {
 }
 
 type Negotiation struct {
-	SDP webrtc.SessionDescription `json:"SDP"`
+	Type string                    `json"type"`
+	SDP  webrtc.SessionDescription `json:"SDP"`
 }
