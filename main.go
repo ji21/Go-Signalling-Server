@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var ID = 1
+
 var viewers = make(map[User]int)
 
 var streamer = User{ID: -1, conn: nil}
@@ -26,6 +28,9 @@ func reader(conn *websocket.Conn) {
 		if err := conn.ReadJSON(&wsMessage); err != nil {
 			log.Fatal(err)
 		}
+		user := User{ID: ID, conn: conn}
+		ID += 1
+		wsMessage.User = user
 		if wsMessage.Type == "offer" {
 			onOffer(&wsMessage)
 		} else if wsMessage.Type == "answer" {
